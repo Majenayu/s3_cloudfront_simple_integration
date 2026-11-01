@@ -1,231 +1,62 @@
-# S3 & CloudFront Image Upload Solution
+# S3 + CloudFront Image Integration
 
-A full-stack image uploading application built with React, Node.js/Express, MongoDB, and AWS S3.
+A TypeScript full-stack image-upload application. The Vite/React frontend authenticates users and manages images through an Express backend; the backend persists metadata in MongoDB and integrates with S3/CloudFront services through its service layer.
 
-## Features
+## Architecture
 
-- 🔐 User authentication (Register/Login)
-- 📤 Image upload to AWS S3
-- 🖼️ Image gallery with grid view
-- 🗑️ Delete images (owner only)
-- ☁️ CloudFront or direct S3 URL support
-- 📱 Fully responsive design
-- ✨ Modern, beautiful UI with animations
+```mermaid
+flowchart LR
+  UI[React/Vite frontend] --> API[Express backend]
+  API --> Auth[/api/auth routes/]
+  API --> Images[/api/images routes/]
+  API --> Mongo[(MongoDB)]
+  API --> S3[(Amazon S3)]
+  S3 --> CDN[CloudFront distribution]
+```
 
-## Tech Stack
+`backend/index.ts` configures CORS, JSON parsing, database startup, auth/image routes, and error handling. `backend/src/` contains configuration, middleware, models, controllers, and routes. `frontend/` is a React 19/Vite client.
 
-### Backend
-- **Runtime:** Bun
-- **Framework:** Express.js
-- **Database:** MongoDB with Mongoose
-- **Storage:** AWS S3
-- **Authentication:** JWT
-- **File Upload:** Multer + Multer-S3
-
-### Frontend
-- **Framework:** React 19 with TypeScript
-- **Build Tool:** Vite
-- **Routing:** React Router DOM
-- **HTTP Client:** Axios
-- **Styling:** CSS with modern gradients and animations
-
-## Prerequisites
-
-- Bun installed (`curl -fsSL https://bun.sh/install | bash`)
-- MongoDB Atlas account or local MongoDB
-- AWS account with S3 bucket created
-- AWS IAM credentials with S3 permissions
-
-## Setup Instructions
-
-### 1. Backend Setup
+## Setup
 
 ```bash
-cd backend
+cd backend && npm ci
+cp .env.example .env
+npm run dev
 
-# Install dependencies
-bun install
-
-# Configure environment variables
-# Edit backend/.env and add your credentials:
-# - MongoDB URI (already configured)
-# - AWS credentials (Access Key ID, Secret Access Key, Bucket Name, Region)
-# - JWT secret
-
-# Start the backend server
-bun run dev
+# in another shell
+cd frontend && npm ci
+cp .env.example .env
+npm run dev
 ```
 
-The backend will run on `http://localhost:3000`
+Set MongoDB, S3 bucket/region/credentials, CloudFront distribution details, JWT/session settings, and `FRONTEND_URL` in the appropriate environment files. Never expose AWS secret keys to the frontend.
 
-### 2. Frontend Setup
+## API
 
-```bash
-cd frontend
+`GET /` is a health/version response. Authentication is mounted at `/api/auth`; image operations are mounted at `/api/images`. Use the route/controller implementations as the source of truth for request schemas and authorization.
 
-# Install dependencies
-bun install
+## Deployment
 
-# Start the development server
-bun run dev
-```
+Build the frontend with `npm run build` and deploy its static output behind CloudFront. Run the backend as a Node.js service, restrict S3 access to the service role, configure CORS to the deployed frontend origin, and use signed URLs or equivalent least-privilege access.
 
-The frontend will run on `http://localhost:5173`
+## Testing and limitations
 
-## Environment Variables
+The manifests provide frontend lint/build scripts but no complete integration suite. Test login, token expiry, upload size/type validation, S3 failures, CDN cache invalidation, and unauthorized image access.
 
-### Backend (.env)
+## Security and operations
 
-```env
-PORT=3000
-NODE_ENV=development
+- Keep credentials, database URLs, OAuth tokens, API keys, and signing secrets in environment variables; never commit them.
+- Validate and constrain uploaded files and user input at the server boundary, and enable HTTPS in production.
+- Review dependency updates and rotate any credential that has appeared in repository history.
 
-# MongoDB Connection
-MONGODB_URI=mongodb+srv://neverlearnacademy:Neverlearn2024@neverlearn.lk0wklk.mongodb.net/s3-crud?retryWrites=true&w=majority
+## Testing
 
-# JWT Configuration
-JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+The repository currently has no comprehensive automated test suite unless noted above. Before production changes, add tests for authentication/authorization, validation failures, persistence errors, and the primary user workflow.
 
-# AWS S3 Configuration
-AWS_ACCESS_KEY_ID=your-aws-access-key-id
-AWS_SECRET_ACCESS_KEY=your-aws-secret-access-key
-AWS_REGION=us-east-1
-S3_BUCKET_NAME=your-s3-bucket-name
+## Limitations and roadmap
 
-# CloudFront Configuration (Optional - leave empty to use direct S3 URLs)
-CLOUDFRONT_DOMAIN=
-
-# Upload Configuration
-MAX_FILE_SIZE=10485760
-```
-
-### Frontend (.env)
-
-```env
-VITE_API_URL=http://localhost:3000
-```
-
-## AWS S3 Setup
-
-1. **Create an S3 Bucket:**
-   - Go to AWS S3 Console
-   - Create a new bucket
-   - Enable public access if using direct S3 URLs (or use CloudFront)
-
-2. **Configure Bucket Permissions:**
-   ```json
-   {
-     "Version": "2012-10-17",
-     "Statement": [
-       {
-         "Sid": "PublicReadGetObject",
-         "Effect": "Allow",
-         "Principal": "*",
-         "Action": "s3:GetObject",
-         "Resource": "arn:aws:s3:::your-bucket-name/*"
-       }
-     ]
-   }
-   ```
-
-3. **Create IAM User:**
-   - Create an IAM user with programmatic access
-   - Attach policy: `AmazonS3FullAccess` (or create custom policy)
-   - Save Access Key ID and Secret Access Key
-
-4. **Optional - CloudFront Setup:**
-   - Create a CloudFront distribution
-   - Set S3 bucket as origin
-   - Add CloudFront domain to backend `.env`
-
-## API Endpoints
-
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login user
-
-### Images
-- `GET /api/images` - Get all images (with pagination)
-- `GET /api/images/user/:userId` - Get user's images
-- `POST /api/images` - Upload image (requires authentication)
-- `DELETE /api/images/:id` - Delete image (requires authentication, owner only)
-
-## Usage
-
-1. **Register/Login:**
-   - Create a new account or login with existing credentials
-
-2. **Upload Images:**
-   - Click "Upload Image" button
-   - Drag & drop or browse for an image
-   - Add optional title and description
-   - Click "Upload Image"
-
-3. **View Gallery:**
-   - Browse all uploaded images
-   - Filter by "All Images" or "My Images"
-   - Click on any image to view fullscreen
-
-4. **Delete Images:**
-   - Only your own images will show a delete button
-   - Click "Delete" and confirm to remove
-
-## Project Structure
-
-```
-backend/
-├── src/
-│   ├── config/          # Database and AWS configuration
-│   ├── controllers/     # Request handlers
-│   ├── middleware/      # Auth and error middleware
-│   ├── models/          # Mongoose models
-│   └── routes/          # API routes
-├── index.ts             # Server entry point
-└── .env                 # Environment variables
-
-frontend/
-├── src/
-│   ├── components/      # React components
-│   ├── context/         # Auth context
-│   ├── pages/           # Page components
-│   ├── services/        # API services
-│   ├── App.tsx          # Main app component
-│   └── main.tsx         # Entry point
-└── .env                 # Environment variables
-```
-
-## Production Deployment
-
-### Backend
-```bash
-# Build and run
-cd backend
-bun install --production
-bun run start
-```
-
-### Frontend
-```bash
-# Build for production
-cd frontend
-bun run build
-
-# Preview production build
-bun run preview
-```
-
-## Security Notes
-
-- ⚠️ Change JWT_SECRET in production
-- ⚠️ Use environment-specific AWS credentials
-- ⚠️ Configure CORS properly for production domains
-- ⚠️ Use HTTPS in production
-- ⚠️ Implement rate limiting for production
+This is an actively evolving project. Production hardening, observability, rate limiting, backup/retention policy, and accessibility/performance validation should be completed before handling sensitive or high-volume workloads.
 
 ## License
 
-MIT
-
-## Author
-
-Built with ❤️ using React, Express, MongoDB, and AWS S3
+See the repository license file and package metadata for the authoritative terms.
