@@ -60,3 +60,14 @@ This is an actively evolving project. Production hardening, observability, rate 
 ## License
 
 See the repository license file and package metadata for the authoritative terms.
+## Implementation notes
+
+The backend is a Bun/TypeScript Express service. Auth routes expose registration/login, while image routes provide authenticated upload, listing, per-user listing, and deletion. Multer streams uploads through the S3 integration; MongoDB/Mongoose stores metadata and CloudFront serves the resulting objects. The Vite/React frontend is intentionally separate and must never receive AWS secret credentials.
+
+### API and security
+
+The current route surface is `/api/auth/*`, `/api/images`, `/api/images/user/:userId`, and `/api/images/:id`, plus `GET /` for service health. Enforce MIME/size limits, ownership checks, JWT expiry/rotation, private bucket policy, signed URLs, restrictive CORS, and CloudFront cache invalidation before production. Run frontend `npm run lint` and `npm run build`; backend startup is `bun run dev`/`bun start`.
+
+### License status
+
+No dedicated license file is present in the inspected tree; license terms are unspecified.
